@@ -1,12 +1,12 @@
 import numpy as np
 
 class LinearRegression:
-    def __init__(self, features_count = 1, learning_rate = 0.1, iterations = 500, initial_weights = None, intercept = 0):
+    def __init__(self, features_count = 1, learning_rate = 0.1, epochs = 500, initial_weights = None, intercept = 0):
         self.features_count = features_count
         self.learning_rate = learning_rate
         self.weights = np.zeros(self.features_count) if initial_weights is not None else initial_weights
         self.intercept = intercept
-        self.epochs = iterations
+        self.epochs = epochs
 
     def normalize_by_minmax(self, datapoints):
         min = np.min(datapoints, axis=0)
@@ -42,9 +42,31 @@ class LinearRegression:
         self.intercept -= (self.learning_rate * intercept_gradient)
 
     def training_prediction(self, features_data):
+        # Update the prediction to weights * features + intercept
         predictions = np.dot() + self.intercept
         return predictions
 
-    def train(self):
+    def train(self, features_data, outputs):
         for epoch in range(self.epochs):
-            ...
+            predictions = self.training_prediction(features_data)
+            cost = self.loss_function_MSE(predictions, outputs)
+
+            TOLERANCE = 1e-6  # "Close enough to zero"
+            if cost < TOLERANCE:
+                print(f"🎯 Cost near zero ({cost:.6f}) at epoch {epoch}!")
+                print(" Model has converged perfectly!")
+                break
+
+            if epoch % 50 == 0:
+                # Show denormalized values for interpretation
+                # Convert back to original scale
+                denormalized_weights = None
+
+                #Print them which will be useful for debugging
+            
+            weights_gradient, intercept_gradient = self.get_cost_derivative(predictions,outputs,features_data)
+            self.update_coefficients_GD(weights_gradient, intercept_gradient)
+
+    # Model inference
+    def predict(self, features):
+        return self.training_prediction(features)
