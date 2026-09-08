@@ -13,13 +13,13 @@ class LinearRegression:
         self.std_vals = None
 
     def normalize_by_minmax(self, datapoints):
-        min = np.min(datapoints, axis=0)
-        max = np.max(datapoints, axis=0)
-        feature_range = np.where(max - min == 0, 1, max - min)
-        normalized_features = (datapoints - min) / feature_range
-        self.min_vals = min
-        self.max_vals = max
-        return [normalized_features, min, max]
+        min_dp = np.min(datapoints, axis=0)
+        max_dp = np.max(datapoints, axis=0)
+        feature_range = np.where(max_dp - min_dp == 0, 1, max_dp - min_dp)
+        normalized_features = (datapoints - min_dp) / feature_range
+        self.min_vals = min_dp
+        self.max_vals = max_dp
+        return [normalized_features, min_dp, max_dp]
 
     def normalize_by_zscore(self, datapoints, mean = 0, std_deviation = 0):
         mean = np.mean(datapoints, axis=0) if mean == 0 else mean
@@ -42,7 +42,7 @@ class LinearRegression:
         intercept = self.intercept - np.sum(self.weights * self.mean_vals / self.std_vals)
         return weights, intercept
 
-    def loss_function_MSE(self, predictions, actuals):
+    def loss_function_mse(self, predictions, actuals):
         error = predictions - actuals
         SSE = error ** 2
         MSE = np.mean(SSE)
@@ -52,14 +52,14 @@ class LinearRegression:
         n = actuals.shape[0]
         # np.dot with the Transposed features matrix.
         # Shape: (2, n) dot (n, 1) = (2, 1) output
-        feature_derivative_SSE = ((2 / n) * np.dot(
+        feature_derivative_sse = ((2 / n) * np.dot(
             features_data.T, (predictions - actuals)
         )).reshape(-1)
-        intercept_derivative_SE = (2 / n) * np.sum(predictions - actuals)
+        intercept_derivative_se = (2 / n) * np.sum(predictions - actuals)
         
-        return feature_derivative_SSE, intercept_derivative_SE
+        return feature_derivative_sse, intercept_derivative_se
 
-    def update_coefficients_GD(self, weight_gradient, intercept_gradient):
+    def update_coefficients_gd(self, weight_gradient, intercept_gradient):
         self.weights -= (self.learning_rate * weight_gradient)
         self.intercept -= (self.learning_rate * intercept_gradient)
 
@@ -84,7 +84,7 @@ class LinearRegression:
 
         for epoch in range(self.epochs):
             predictions = self.training_prediction(normalized_features)
-            cost = self.loss_function_MSE(predictions, outputs)
+            cost = self.loss_function_mse(predictions, outputs)
 
             TOLERANCE = 1e-12  # "Close enough to zero"
             if cost < TOLERANCE:
@@ -102,7 +102,7 @@ class LinearRegression:
             weights_gradient, intercept_gradient = self.get_cost_derivative(
                 predictions, outputs, normalized_features
             )
-            self.update_coefficients_GD(weights_gradient, intercept_gradient)
+            self.update_coefficients_gd(weights_gradient, intercept_gradient)
 
         return self.denormalize_coefficients()
 
