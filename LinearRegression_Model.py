@@ -1,12 +1,21 @@
+import pickle
+
 import numpy as np
 
 class LinearRegression:
-    def __init__(self, features_count = 1, learning_rate = 0.1, epochs = 1000, initial_weights = None, intercept = 0):
+    def __init__(self, features_count = 1, learning_rate = 0.1, epochs = 1000,
+                 initial_weights = None, intercept = 0, update_tolerance = 1e-10,
+                 cost_tolerance = 1e-12, patience = 5):
         self.features_count = features_count
         self.learning_rate = learning_rate
         self.weights = np.zeros(self.features_count) if initial_weights is None else np.asarray(initial_weights, dtype=float)
         self.intercept = intercept
         self.epochs = epochs
+        self.update_tolerance = update_tolerance
+        self.cost_tolerance = cost_tolerance
+        self.patience = patience
+        self.converged_epoch = None
+        self.cost_history = []
         self.min_vals = None
         self.max_vals = None
         self.mean_vals = None
@@ -82,15 +91,13 @@ class LinearRegression:
         # Normalize before gradient descent; all epoch calculations use this matrix.
         normalized_features, self.mean_vals, self.std_vals = self.normalize_by_zscore(features_data)
 
+        stable_epochs = 0
+        previous_cost = None
+
         for epoch in range(self.epochs):
             predictions = self.training_prediction(normalized_features)
             cost = self.loss_function_mse(predictions, outputs)
-
-            TOLERANCE = 1e-12  # "Close enough to zero"
-            if cost < TOLERANCE:
-                print(f"Cost near zero ({cost:.6f}) at epoch {epoch}!")
-                print(" Model has converged perfectly!")
-                break
+            self.cost_history.append(cost)
 
             if epoch % 50 == 0:
                 # Show denormalized values for interpretation
@@ -102,7 +109,27 @@ class LinearRegression:
             weights_gradient, intercept_gradient = self.get_cost_derivative(
                 predictions, outputs, normalized_features
             )
+
+            weight_update = self.learning_rate * weights_gradient
+            intercept_update = self.learning_rate * intercept_gradient
+            max_update = max(
+                np.max(np.abs(weight_update)), abs(intercept_update)
+            )
+
+            if (previous_cost is not None
+                    and max_update < self.update_tolerance
+                    and abs(previous_cost - cost) < self.cost_tolerance):
+                stable_epochs += 1
+            else:
+                stable_epochs = 0
+
+            if stable_epochs >= self.patience:
+                self.converged_epoch = epoch
+                print(f"Converged at epoch {epoch}: parameter updates and cost improvement are negligible.")
+                break
+
             self.update_coefficients_gd(weights_gradient, intercept_gradient)
+            previous_cost = cost
 
         return self.denormalize_coefficients()
 
@@ -118,3 +145,27 @@ class LinearRegression:
         weights, intercept = self.denormalize_coefficients()
         predictions = np.dot(features, weights) + intercept
         return predictions.reshape(-1, 1)
+
+    def save_parameters(self, file_path):
+        parameters = {
+            "features_count": self.features_count,
+            "weights": self.weights,
+            "intercept": self.intercept,
+            "mean_vals": self.mean_vals,
+            "std_vals": self.std_vals,
+        }
+
+        with open(file_path, "wb") as parameter_file:
+            pickle.dump(parameters, parameter_file)
+
+    @classmethod
+    def load_parameters(cls, file_path):
+        with open(file_path, "rb") as parameter_file:
+            parameters = pickle.load(parameter_file)
+
+        model = cls(features_count=parameters["features_count"])
+        model.weights = np.asarray(parameters["weights"], dtype=float)
+        model.intercept = float(parameters["intercept"])
+        model.mean_vals = np.asarray(parameters["mean_vals"], dtype=float)
+        model.std_vals = np.asarray(parameters["std_vals"], dtype=float)
+        return model

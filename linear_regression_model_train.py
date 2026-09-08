@@ -16,7 +16,7 @@ print(f"Shape of Output from dataset : {outputs.shape}")
 features_count = features_data.shape[1]
 
 # Intialize hyper parameters
-learning_rate = 0.1
+learning_rate = 0.05
 epochs = 1000
 
 # Train/test split (80/20), shuffled so row order in the csv doesn't bias either set
@@ -37,6 +37,7 @@ model = LinearRegression(features_count, learning_rate, epochs)
 
 # Train only on the training split
 weights, intercept = model.train(features_train, outputs_train)
+model.save_parameters("linear_regression_params.pkl")
 print(f"Model training completed! weights : {weights} and intercept(bias) : {intercept}")
 
 # Evaluate on the held-out test split
